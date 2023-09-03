@@ -1,0 +1,156 @@
+<html>
+    <head>
+        
+    
+    </head>
+    <body>
+        <button id="outputy">HTMLソースを出力する</button>
+        <div id="msg" style="font-weight: 800;color: #f51a55;height: 70px;"></div>
+        
+        
+        <div>動画ID</div>
+        <input type="text" id="videoId"></input>
+        <br/>
+        
+        <div>再生する区間</div>
+        <textarea id="segments" cols="80" rows="20">
+# 例
+2:13    04:24   オープニング
+2:12:42  2:15:17
+    
+2:45:2   2:57:14 終わり
+
+# 一行ごとに処理します。
+# "#"で始まる行は無視されます。
+# それ以外のケースでは、まず半角スペースで要素に分割します。
+# 半角スペースは連続していればいくつでも続けられます。
+# 要素の数が0ならその行は無視します。
+# それ以外なら開始時刻、終了時刻の2つが必須です。
+# タイトルは必須ではありません。
+# 半角スペースを挟まず、半角のコロンで区切って時刻を表現してください。
+
+
+        </textarea>
+        
+        
+        <br/>
+        <br/>
+        <br/>
+        <br/>
+        <textarea id="rslt" cols="120" rows="20">ここに表示されるHTMLソースを.htmlファイルとして保存してください。文字コードはUTF-8にしてください！</textarea>
+        
+        <script type="text/javascript">
+            let msg = document.getElementById('msg');
+            let idInput = document.getElementById('videoId');
+            let segments = document.getElementById('segments');
+            let rslt = document.getElementById("rslt");
+            
+            
+            let tmpl0 = `<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>Koyo Digest</title>
+    </head>
+    <body>
+        <script type="text/javascript">`;
+            
+
+            // something is wrong...?????
+            let tmpl1 ="</script" + `>
+        <div id="kyDigestApp"></div>
+        <script src="ky_digest.js" type="text/javascript" charset="UTF-8"></script` + `>
+    </body>
+</html>`;
+            
+            function getSecondsFromTimeText(t){
+                let numbers = t.split(':');
+                if(numbers.length == 1){
+                    return parseInt(numbers[0]);
+                }
+                else if(numbers.length == 2){
+                     return 60 * parseInt(numbers[0]) + parseInt(numbers[1]);
+                }
+                else {
+                     return 3600 * parseInt(numbers[0]) + 60 * parseInt(numbers[1]) + parseInt(numbers[2]);
+                }
+            }
+            function parseTexty(){
+                let lines = segments.value.split("\n");
+                let items = [];
+                for(let i=0; i<lines.length; i++){
+                    let line = "";
+                    for(let j=0; j<lines[i].length; j++){
+                        if(lines[i][j] == '#'){
+                            break;
+                        }
+                        else{
+                            line += lines[i][j];
+                        }
+                    }
+                    let tokens = line.split(/ +/);
+                    
+                    // fucking javascript! split method doesnt work well! shine!
+                    let tmpTokens = [];
+                    for(let j=0; j<tokens.length; j++){
+                        if(tokens[j].length > 0){
+                            tmpTokens.push(tokens[j]);
+                        }
+                    }
+                    tokens = tmpTokens;
+                    
+                    if(tokens.length < 2){
+                        continue;
+                    }
+                    else if(tokens.length == 2){
+                        tokens.push("");
+                    }
+                    else if(tokens.length > 3){
+                        // join tokens with spaces as seperators.
+                        let s = tokens[2];
+                        for(let j=3; j<tokens.length; j++){
+                            s += " " + tokens[j];
+                        }
+                    }
+                    
+                    //////////////////////////////////////////////
+                    // now tokens.length is 3
+                    
+                    let item = [];
+                    item.push(getSecondsFromTimeText(tokens[0]));
+                    item.push(getSecondsFromTimeText(tokens[1]));
+                    item.push(tokens[2]);
+                    
+                    items.push(item);
+                }
+                return items;
+            }
+            
+            function outputBtn(){
+                if(idInput.value.length == 0){
+                    msg.innerHTML = "動画IDが空です！";
+                    return;
+                }
+                
+                
+                
+                let s = tmpl0 + '\n            let kyg_videoId = "' + idInput.value + '";';
+                s += "\n            let kyg_scenarioRecommended = [\n";
+                
+                let items = parseTexty();
+                for(let i=0; i<items.length; i++){
+                    let itemStr = "[" + items[i][0] + ", " + items[i][1] + ', "' + items[i][2] + '"], ';
+                    s += "                " + itemStr + "\n";
+                }
+                s += "            ];\n        "
+                s += tmpl1;
+                
+                rslt.textContent = s;
+                msg.innerText = "";
+            }
+            
+            document.getElementById('outputy').addEventListener('click', outputBtn);
+        </script>
+    </body>
+
+</html>
